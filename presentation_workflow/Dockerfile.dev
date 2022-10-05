@@ -14,4 +14,5 @@ RUN touch /var/spool/cron/crontabs/root
 RUN crontab -l
 
 # CMD ["python", "manage.py", "runserver", "0.0.0.0:8001"]
-CMD python manage.py crontab add && service cron start && python manage.py runserver "0.0.0.0:8001"
+# CMD python manage.py crontab add && service cron start && python manage.py runserver "0.0.0.0:8001"
+CMD ["python", "presentation_mailer/consumer.py"]
