@@ -1,6 +1,7 @@
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 import json
+import pika
 
 from common.json import ModelEncoder
 from events.api_views import ConferenceListEncoder
@@ -30,6 +31,37 @@ class PresentationDetailEncoder(ModelEncoder):
     encoders = {
         "conference": ConferenceListEncoder(),
     }
+
+    def get_extra_data(self, o):
+        return {"status": o.status.name}
+
+
+class PresentationQueueItemEncoder(ModelEncoder):
+    model = Presentation
+    properties = [
+        "presenter_name",
+        "presenter_email",
+        "title",
+    ]
+
+
+def add_presentation_queue_item(presentation, host_name, queue_name):
+    content = JsonResponse(
+        presentation,
+        encoder=PresentationQueueItemEncoder,
+        safe=False,).content.decode("utf-8")
+
+    parameters = pika.ConnectionParameters(host=host_name)
+    connection = pika.BlockingConnection(parameters)
+    channel = connection.channel()
+    channel.queue_declare(queue=queue_name)
+    channel.basic_publish(
+        exchange="",
+        routing_key=queue_name,
+        body=content,
+    )
+    connection.close()
+    return
 
 
 @require_http_methods(["GET", "POST"])
@@ -112,4 +144,37 @@ def api_show_presentation(request, pk):
         presentation,
         encoder=PresentationDetailEncoder,
         safe=False,
+    )
+
+
+@require_http_methods(["PUT"])
+def api_approve_presentation(request, pk):
+    presentation = Presentation.objects.get(id=pk)
+    presentation.approve()
+
+    host_name = "rabbitmq"
+    queue_name = "presentation_approvals"
+
+    add_presentation_queue_item(presentation, host_name, queue_name)
+
+    return JsonResponse(
+        presentation,
+        encoder=PresentationDetailEncoder,
+        safe=False
+    )
+
+@require_http_methods(["PUT"])
+def api_reject_presentation(request,pk):
+    presentation = Presentation.objects.get(id=pk)
+    presentation.reject()
+
+    host_name = "rabbitmq"
+    queue_name = "presentation_rejections"
+
+    add_presentation_queue_item(presentation, host_name, queue_name)
+
+    return JsonResponse(
+        presentation,
+        encoder=PresentationDetailEncoder,
+        safe=False
     )
