@@ -10,6 +10,7 @@ services:
       - ./monolith:/app
     depends_on:
       - rabbitmq
+
   attendees_microservice:
     build:
       context: ./attendees_microservice
@@ -18,16 +19,27 @@ services:
       - "8001:8001"
     volumes:
       - ./attendees_microservice:/app
+
+  attendees_account_info:
+    build:
+      context: ./attendees_microservice
+      dockerfile: ./Dockerfile.account_info.dev
+    volumes:
+      - ./attendees_microservice:/app
+
   presentation_workflow:
     build:
       context: ./presentation_workflow
       dockerfile: ./Dockerfile.dev
     depends_on:
       - rabbitmq
+      - mail
     volumes:
       - ./presentation_workflow:/app
+
   rabbitmq:
     image: rabbitmq:3
+
   mail:
     image: mailhog/mailhog
     environment:

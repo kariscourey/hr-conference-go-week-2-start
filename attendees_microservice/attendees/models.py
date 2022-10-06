@@ -2,6 +2,13 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.urls import reverse
 
+class AccountVO(models.Model):
+    email = models.EmailField(max_length=254)
+    first_name = models.CharField(max_length=200)
+    last_name = models.CharField(max_length=200)
+    is_active = models.BooleanField()
+    updated = models.DateTimeField(auto_now_add=True)
+
 
 class ConferenceVO(models.Model):
     import_href = models.CharField(max_length=200, unique=True)
